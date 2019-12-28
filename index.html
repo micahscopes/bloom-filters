@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>Bloom-Filters</h1>
+<p><a href="https://travis-ci.org/Callidon/bloom-filters"><img src="https://travis-ci.org/Callidon/bloom-filters.svg?branch=master" alt="Build Status"></a> <a href="https://codecov.io/gh/Callidon/bloom-filters"><img src="https://codecov.io/gh/Callidon/bloom-filters/branch/master/graph/badge.svg" alt="codecov"></a></p>
+<p><strong>Keywords:</strong> bloom, filter, bloom filter, probabilistic, datastructure</p>
+<p>JS implementation of probabilistic data structures: Bloom Filter (and its derived), HyperLogLog, Count-Min Sketch, Top-K and MinHash</p>
+<p><strong>Use non-cryptographic hash internally since (v0.7.0)</strong> <a href="https://cyan4973.github.io/xxHash/">XXHASH</a></p>
+<p><strong>Breaking API changes from the 0.7.1 to the 0.8.0 version.</strong></p>
+<p><a href="https://callidon.github.io/bloom-filters/">Online documentation</a></p>
+<h1>Table of contents</h1>
+<ul>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#data-structures">Data structures</a>
+<ul>
+<li><a href="#classic-bloom-filter">Classic Bloom Filter</a></li>
+<li><a href="#partitioned-bloom-filter">Partitioned Bloom Filter</a></li>
+<li><a href="#cuckoo-filter">Cuckoo Filter</a></li>
+<li><a href="#counting-bloom-filter">Counting Bloom Filter</a></li>
+<li><a href="#count-min-sketch">Count Min Sketch</a></li>
+<li><a href="#invertible-bloom-filters">Invertible Bloom Filters (Key)</a></li>
+</ul>
+</li>
+<li><a href="#export-and-import">Export and import</a></li>
+<li><a href="#documentation">Documentation</a></li>
+<li><a href="#tests">Tests</a></li>
+<li><a href="#references">References</a></li>
+<li><a href="#changelog">Changelog</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<h2>Installation</h2>
+<pre class="prettyprint source lang-bash"><code>  npm install bloom-filters --save
+</code></pre>
+<h2>Data structures</h2>
+<h3>Classic Bloom Filter</h3>
+<p>A Bloom filter is a space-efficient probabilistic data structure, conceived by Burton Howard Bloom in 1970,
+that is used to test whether an element is a member of a set. False positive matches are possible, but false negatives are not.</p>
+<p><strong>Reference:</strong> Bloom, B. H. (1970). <em>Space/time trade-offs in hash coding with allowable errors</em>. Communications of the ACM, 13(7), 422-426.
+(<a href="http://crystal.uta.edu/~mcguigan/cse6350/papers/Bloom.pdf">Full text article</a>)</p>
+<pre class="prettyprint source lang-javascript"><code>const { BloomFilter } = require('bloom-filters')
+// create a Bloom Filter with size = 10 and 4% error rate
+let filter = new BloomFilter(10, 4)
+// lookup for some data
+console.log(filter.has('bob')) // output: true
+console.log(filter.has('daniel')) // output: false
+// print the error rate
+console.log(filter.rate())
+</code></pre>
+<p>Similar constructors:</p>
+<ul>
+<li><code>BloomFilter.create(max_size, error_rate)</code>: create an optimal Bloom filter for a maximum of max_size elements with the desired error rate.</li>
+<li><code>BloomFilter.from(array, error_rate)</code>: same as before, but create an optimal Bloom Filter for the size fo the array provided.</li>
+</ul>
+<h3>Partitioned Bloom Filter</h3>
+<p>A Partitioned Bloom Filter is a variation of a classic Bloom Filter.</p>
+<p>This filter works by partitioning the M-sized bit array into k slices of size <code>m = M/k</code> bits, <code>k = nb of hash functions</code> in the filter.
+Each hash function produces an index over <code>m</code> for its respective slice.
+Thus, each element is described by exactly <code>k</code> bits, meaning the distribution of false positives is uniform across all elements.</p>
+<p>Be careful, as a Partitioned Bloom Filter have much higher collison risks that a classic Bloom Filter on small sets of data.</p>
+<p><strong>Reference:</strong> Chang, F., Feng, W. C., &amp; Li, K. (2004, March). <em>Approximate caches for packet classification.</em> In INFOCOM 2004. Twenty-third AnnualJoint Conference of the IEEE Computer and Communications Societies (Vol. 4, pp. 2196-2207). IEEE.
+(<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.153.6902&amp;rep=rep1&amp;type=pdf">Full text article</a>)</p>
+<p>Otherwise, a Partitioned Bloom Filter <strong>follows the same API than a <a href="#classic-bloom-filter">Classic Bloom Filter</a></strong>.</p>
+<pre class="prettyprint source lang-javascript"><code>const { PartitionedBloomFilter } = require('bloom-filters')
+
+// create a PartitionedBloomFilter of size 10 with 5 hash functions
+const filter = new PartitionedBloomFilter(10, 5)
+
+// add some value in the filter
+filter.add('alice')
+filter.add('bob')
+
+// lookup for some data
+console.log(filter.has('bob')) // output: true
+console.log(filter.has('daniel')) // output: false
+
+// now use it like a classic bloom filter!
+// ...
+</code></pre>
+<p>Similar constructors:</p>
+<ul>
+<li><code>PartitionedBloomFilter.create(max_size, error_rate, load_factor)</code>: create an optimal Partitioned BloomFilter for a maximum of max_size elements with the desired error rate.</li>
+<li><code>PartitionedBloomFilter.from(array, error_rate)</code>: same as before, but create an optimal Partitioned BloomFilter for the size fo the array provided.</li>
+</ul>
+<h3>Cuckoo Filter</h3>
+<p>Cuckoo filters improve on Bloom filters by supporting deletion, limited counting, and bounded False positive rate with similar storage efficiency as a standard Bloom Filter.</p>
+<p><strong>Reference:</strong> Fan, B., Andersen, D. G., Kaminsky, M., &amp; Mitzenmacher, M. D. (2014, December). <em>Cuckoo filter: Practically better than bloom.</em> In Proceedings of the 10th ACM International on Conference on emerging Networking Experiments and Technologies (pp. 75-88). ACM.
+(<a href="https://www.cs.cmu.edu/~dga/papers/cuckoo-conext2014.pdf">Full text article</a>)</p>
+<pre class="prettyprint source lang-javascript"><code>const { CuckooFilter } = require('bloom-filters')
+
+// create a Cuckoo Filter with size = 15, fingerprint length = 3 and bucket size = 2
+const filter = new CuckooFilter(15, 3, 2)
+filter.add('alice')
+filter.add('bob')
+
+// lookup for some data
+console.log(filter.has('bob')) // output: true
+console.log(filter.has('daniel')) // output: false
+
+// remove something
+filter.remove('bob')
+console.log(filter.has('bob')) // output: false
+</code></pre>
+<p>Similar constructors:</p>
+<ul>
+<li><code>CuckooFilter.create(max_size, error_rate, bucketSize, maxKicks, seed)</code>: Create an optimal Cuckoo Filter given the max number of elements, the error rate and the number of buckets.</li>
+</ul>
+<p><strong>Important</strong>: The error rate can go up to 1.10^-18 = (0.000000000000000001). After this, You will get an error saying that the fingerprint length is higher than the hash length.</p>
+<h3>Counting Bloom Filter</h3>
+<p>A Counting Bloom filter works in a similar manner as a regular Bloom filter; however, it is able to keep track of insertions and deletions. In a counting Bloom filter, each entry in the Bloom filter is a small counter associated with a basic Bloom filter bit.</p>
+<p><strong>Reference:</strong> F. Bonomi, M. Mitzenmacher, R. Panigrahy, S. Singh, and G. Varghese, “An Improved Construction for Counting Bloom Filters,” in 14th Annual European Symposium on Algorithms, LNCS 4168, 2006, pp.</p>
+<pre class="prettyprint source lang-javascript"><code>const CountingBloomFilter = require('bloom-filters').CountingBloomFilter;
+
+// create a Bloom Filter with capacity = 15 and 0.1% error rate
+let filter = new CountingBloomFilter(15, 0.1);
+
+// alternatively, create a Counting Bloom Filter from an array with 1% error rate
+filter = CountingBloomFilter.from([ 'alice', 'bob' ], 0.1);
+// add some value in the filter
+filter.add('alice');
+filter.add('bob');
+filter.add('carole');
+
+// remove some value
+filter.remove('carole');
+
+// lookup for some data
+console.log(filter.has('bob')); // output: true
+console.log(filter.has('carole')); // output: false
+console.log(filter.has('daniel')); // output: false
+
+// print false positive rate (around 0.1)
+console.log(filter.rate());
+</code></pre>
+<p>Similar constructors:</p>
+<ul>
+<li><code>CountingBloomFilter.create(max_size, error_rate, load_factor)</code>: create an optimal Counting Bloom Filter for a maximum of max_size elements with the desired error rate.</li>
+<li><code>CountingBloomFilter.from(array, error_rate)</code>: same as before, but create an optimal Counting Bloom Filter for the size fo the array provided.</li>
+</ul>
+<h3>Count Min Sketch</h3>
+<p>The Count Min Sketch (CM sketch) is a probabilistic data structure that serves as a frequency table of events in a stream of data.
+It uses hash functions to map events to frequencies, but unlike a hash table uses only sub-linear space, at the expense of overcounting some events due to collisions.</p>
+<p><strong>Reference:</strong> Cormode, G., &amp; Muthukrishnan, S. (2005). <em>An improved data stream summary: the count-min sketch and its applications.</em> Journal of Algorithms, 55(1), 58-75.
+(<a href="http://vaffanculo.twiki.di.uniroma1.it/pub/Ing_algo/WebHome/p14_Cormode_JAl_05.pdf">Full text article</a>)</p>
+<pre class="prettyprint source lang-javascript"><code>const { CountMinSketch } = require('bloom-filters')
+
+// create a new count min sketch with 2048 columns and 1 row
+const sketch = new CountMinSketch(2048, 1)
+// or create an optimal Count-Min-sketch with epsilon = 0.001 and delta = 0.001
+// or sketck = CountMinSketch.create(0.001, 0.001)
+// push some occurrences in the sketch
+sketch.update('alice')
+sketch.update('alice')
+sketch.update('bob')
+
+// count occurrences
+console.log(sketch.count('alice')) // output: 2
+console.log(sketch.count('bob')) // output: 1
+console.log(sketch.count('daniel')) // output: 0
+</code></pre>
+<p>Similar constructors:</p>
+<ul>
+<li><code>CountMinSketch.create(epsilon, delta)</code>: create an optimal Count-min sketch for an epsilon and delta provided</li>
+</ul>
+<h3>Invertible Bloom Filters</h3>
+<p>An Invertible Bloom Lookup Table is a space-efficient and probabilistic data-structure for solving the set-difference problem efficiently without the use of logs or other prior context. It computes the set difference with communication proportional to the size of the difference between the sets being compared.
+They can simultaneously calculate D(A−B) and D(B−A) using O(d) space. This data structure encodes sets in a fashion that is similar in spirit to Tornado codes’ construction, in that it randomly combines elements using the XOR function.</p>
+<p><strong>Reference:</strong> Eppstein, D., Goodrich, M. T., Uyeda, F., &amp; Varghese, G. (2011). <em>What's the difference?: efficient set reconciliation without prior context.</em> ACM SIGCOMM Computer Communication Review, 41(4), 218-229. <a href="http://www.sysnet.ucsd.edu/sysnet/miscpapers/EppGooUye-SIGCOMM-11.pdf">full-text article</a></p>
+<p><strong>Inputs:</strong> Only Accept Buffer (node: <code>require('buffer')</code> or browser <code>require('buffer/').Buffer</code>) as input</p>
+<p><strong>Methods:</strong>
+Please respects the method inputs and don't pass JSON exported structures as inputs. Import them before.</p>
+<ul>
+<li><code>add(element: Buffer) -&gt; void</code>: add an element into the IBLT</li>
+<li><code>delete(element: Buffer) -&gt; void</code>: delete an element from the IBLT</li>
+<li><code>has(element: Buffer) -&gt; true|false|'perhaps'</code>: return whether an element is in the IBLT or not, or perhaphs in</li>
+<li><code>substract(remote: InvertibleBloomFilter)</code>: this IBLT subtracted from remote, return another IBLT</li>
+<li><code>static InvertibleBloomFilter.decode(subtracted: InvertibleBloomFilter) -&gt; {additional: Buffer[], missing: Buffer[]}</code>: decode a subtracted IBLT</li>
+<li><code>listEntries() -&gt; {success: true|false, output: Buffer[]}</code>: list all entries in the IBLT</li>
+<li>getters:
+<ul>
+<li><code>length</code>: return the number of elements inserted, iterate on all count variables of all cells and return the average (sum/size)</li>
+<li><code>size</code>: return the number of cells</li>
+<li><code>hashCount</code>: return the number of times an element is hashed into the structure</li>
+<li><code>elements</code>: return an array of all cells</li>
+</ul>
+</li>
+</ul>
+<pre class="prettyprint source lang-javascript"><code>const { InvertibleBloomFilter } = require('bloom-filters')
+
+// If you are a NODEJS user, no need to import Buffer
+// otherwie, if you are a BROWSER-BASED user, you must import the buffer package (https://www.npmjs.com/package/buffer)
+
+const hashcount = 3
+const size = 50
+const iblt = new InvertibleBloomFilter(size, hashcount)
+const remote = new InvertibleBloomFilter(size, hashcount)
+
+// push some data in the iblt
+const data = [Buffer.from('alice'),
+  Buffer.from(JSON.stringify(42)),
+  Buffer.from('help'),
+  Buffer.from('meow'),
+  Buffer.from('json')]
+
+data.forEach(e => iblt.add(e))
+
+const remoteData = [Buffer.from('alice'),
+  Buffer.from('car'),
+  Buffer.from('meow'),
+  Buffer.from('help')]
+
+remoteData.forEach(e => remote.add(e))
+
+const sub = iblt.substract(remote)
+const result = InvertibleBloomFilter.decode(sub)
+console.log('Did we successfully decode the subtracted iblts?', result.success, result.reason)
+console.log('Missing elements for iblt: ', result.missing, result.missing.map(e => e.toString()))
+console.log('Additional elements of iblt and missing elements of the remote iblt: ', result.additional, result.additional.map(e => e.toString()))
+// create the iblt like before
+console.log('Verify if Buffer.from(&quot;help&quot;) is in the iblt: ', iblt.has(Buffer.from('help')))
+// true with high probability if well configured
+
+iblt.delete(Buffer.from('help'))
+// no error ;)
+
+console.log('Deleting Buffer.from(&quot;help&quot;) and rechecking:', iblt.has(Buffer.from('help')))
+
+const list = iblt.listEntries()
+console.log('Remaining entries after deletion: ', list.success, list.output.map(e => e.toString()))
+
+</code></pre>
+<p>The example can be run in tests/iblt-example.js</p>
+<p><strong>Tuning the IBLT</strong> We recommend to use at least a <strong>hashcount</strong> of 3 and an <strong>alpha</strong> of 1.5 for at least 50 differences, which equals to 1.5*50 = 75 cells. Then, if you insert a huge number of values in there, the decoding will work (whatever the number of differences less than 50) but testing the presence of a value is still probabilistic, based on the number of elements  inserted (Even for the functions like listEntries). For more details, you should read the seminal research paper on IBLTs (<a href="http://www.sysnet.ucsd.edu/sysnet/miscpapers/EppGooUye-SIGCOMM-11.pdf">full-text article</a>).</p>
+<h2>Export and import</h2>
+<p>All data structures exposed by this package can be <strong>exported and imported to/from JSON</strong>:</p>
+<ul>
+<li>Use the method <code>saveAsJSON()</code> to export any data structures into a JSON object.</li>
+<li>Use the static method <code>fromJSON(json)</code> to load a data structure from a JSON object.</li>
+</ul>
+<pre class="prettyprint source lang-javascript"><code>const { BloomFilter } = require('bloom-filters')
+
+const filter = new BloomFilter(15, 0.01)
+filter.add('alice')
+
+// export a bloom filter to JSON
+const exported = filter.saveAsJSON()
+
+// do something with the JSON object (save it as file, send it to a server, etc)
+// ...
+
+// import the same filter from its JSON export
+const importedFilter = BloomFilter.fromJSON(exported)
+console.log(filter.has('alice')) // output: true
+console.log(filter.has('bob')) // output: false
+</code></pre>
+<h2>Every hash function is seeded</h2>
+<p>By default every hash function is seeded with an internal seed which is equal to <code>0x1234567890</code>. If you want to change it:</p>
+<pre class="prettyprint source lang-javascript"><code>const BloomFilter = require('bloom-filter')
+const bl = new BloomFilter.MyBloomFilter(...)
+console.log(bl.seed) // 78187493520
+bl.seed = 0xABCD
+console.log(bl.seed) // 43981
+</code></pre>
+<h2>Documentation</h2>
+<p>See <a href="https://callidon.github.io/bloom-filters/">documentation online</a> or generate it in directory <code>doc/</code> with: <code>npm run doc</code></p>
+<h2>Tests</h2>
+<p>Running with Mocha + Chai</p>
+<pre class="prettyprint source lang-bash"><code># run tests
+npm test
+
+# generate coverage with istanbul
+npm run coverage
+</code></pre>
+<h2>References</h2>
+<ul>
+<li><a href="http://crystal.uta.edu/~mcguigan/cse6350/papers/Bloom.pdf">Classic Bloom Filter</a>: Bloom, B. H. (1970). <em>Space/time trade-offs in hash coding with allowable errors.</em> Communications of the ACM, 13(7), 422-426.</li>
+<li><a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.153.6902&amp;rep=rep1&amp;type=pdf">Partitioned Bloom Filter</a>: Chang, F., Feng, W. C., &amp; Li, K. (2004, March). <em>Approximate caches for packet classification.</em> In INFOCOM 2004. Twenty-third AnnualJoint Conference of the IEEE Computer and Communications Societies (Vol. 4, pp. 2196-2207). IEEE.</li>
+<li><a href="https://www.cs.cmu.edu/~dga/papers/cuckoo-conext2014.pdf">Cuckoo Filter</a>: Fan, B., Andersen, D. G., Kaminsky, M., &amp; Mitzenmacher, M. D. (2014, December). <em>Cuckoo filter: Practically better than bloom.</em> In Proceedings of the 10th ACM International on Conference on emerging Networking Experiments and Technologies (pp. 75-88). ACM.</li>
+<li><a href="http://www.eecs.harvard.edu/~michaelm/postscripts/esa2006b.pdf">Counting Bloom Filter</a>: F. Bonomi, M. Mitzenmacher, R. Panigrahy, S. Singh, and G. Varghese, <em>An Improved Construction for Counting Bloom Filters</em>, in 14th Annual European Symposium on Algorithms, LNCS 4168, 2006, pp.</li>
+<li><a href="http://vaffanculo.twiki.di.uniroma1.it/pub/Ing_algo/WebHome/p14_Cormode_JAl_05.pdf">Count Min Sketch</a>: Cormode, G., &amp; Muthukrishnan, S. (2005). <em>An improved data stream summary: the count-min sketch and its applications.</em> Journal of Algorithms, 55(1), 58-75.</li>
+<li><a href="http://www.sysnet.ucsd.edu/sysnet/miscpapers/EppGooUye-SIGCOMM-11.pdf">Invertible Bloom Filters</a>: Eppstein, D., Goodrich, M. T., Uyeda, F., &amp; Varghese, G. (2011). <em>What's the difference?: efficient set reconciliation without prior context.</em> ACM SIGCOMM Computer Communication Review, 41(4), 218-229.</li>
+</ul>
+<h2>Changelog</h2>
+<p><strong>v0.8.0</strong>: Fix some issues with the cuckoo filter (performances). Fix the global API. It allows now to customize each Filter. If you want to use the old API, use the <code>.create()</code> or <code>.from()</code> functions to match the old api.</p>
+<p><strong>v0.7.1</strong>: Add the Counting Bloom Filter.</p>
+<p><strong>v0.7.0</strong> Move to <a href="https://cyan4973.github.io/xxHash/">XXHASH</a> for hashing elements in the library. One property has been added into the exported json <code>_seed</code> which is used to seed every hash of every elements. Update Invertible Bloom Filters with #add, #has, #delete, #listEntries, #substract, #Static.decode methods. Updated the way to get distinct indices which could have collisions in many cases.</p>
+<p><strong>v0.6.1</strong> Add Invertible Bloom Filters (only #encode/#substract/#Static.decode methods)</p>
+<h2>License</h2>
+<p><a href="https://github.com/Callidon/bloom-filters/blob/master/LICENSE">MIT License</a></p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="BloomFilter.html">BloomFilter</a></li><li><a href="Cell.html">Cell</a></li><li><a href="CountingBloomFilter.html">CountingBloomFilter</a></li><li><a href="CountMinSketch.html">CountMinSketch</a></li><li><a href="CuckooFilter.html">CuckooFilter</a></li><li><a href="Exportable.html">Exportable</a></li><li><a href="InvertibleBloomFilter.html">InvertibleBloomFilter</a></li><li><a href="PartitionedBloomFilter.html">PartitionedBloomFilter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#allInOneHashTwice">allInOneHashTwice</a></li><li><a href="global.html#cloneField">cloneField</a></li><li><a href="global.html#getDefaultSeed">getDefaultSeed</a></li><li><a href="global.html#getDistinctIndices">getDistinctIndices</a></li><li><a href="global.html#getIndices">getIndices</a></li><li><a href="global.html#hashAsInt">hashAsInt</a></li><li><a href="global.html#hashAsString">hashAsString</a></li><li><a href="global.html#hashIntAndString">hashIntAndString</a></li><li><a href="global.html#hex2bin">hex2bin</a></li><li><a href="global.html#isEmptyBuffer">isEmptyBuffer</a></li><li><a href="global.html#power2">power2</a></li><li><a href="global.html#xorBuffer">xorBuffer</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.3</a> on Sat Dec 28 2019 11:26:14 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
